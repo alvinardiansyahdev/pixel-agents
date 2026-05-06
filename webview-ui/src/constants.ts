@@ -52,6 +52,25 @@ export const BUTTON_LINE_WIDTH_ZOOM_FACTOR = 0.5;
 export const BUBBLE_FADE_DURATION_SEC = 0.5;
 export const BUBBLE_SITTING_OFFSET_PX = 10;
 export const BUBBLE_VERTICAL_OFFSET_PX = 24;
+
+// ── Ruflo Chat Bubbles ─────────────────────────────────────────
+export const CHAT_BUBBLE_WIDTH = 150;
+export const CHAT_BUBBLE_HEIGHT = 40;
+export const CHAT_BUBBLE_PADDING = 8;
+export const CHAT_BUBBLE_BORDER_RADIUS = 8;
+export const CHAT_BUBBLE_FONT_SIZE = 12;
+export const CHAT_BUBBLE_FADE_DURATION = 5; // seconds
+
+// Bubble colors by type
+export const BUBBLE_THINKING_COLOR = '#6B7280';   // Gray
+export const BUBBLE_QUESTION_COLOR = '#3B82F6';  // Blue
+export const BUBBLE_ANSWER_COLOR = '#22C55E';  // Green
+export const BUBBLE_ERROR_COLOR = '#EF4444'; // Red
+export const BUBBLE_BROADCAST_COLOR = '#EAB308'; // Yellow
+export const BUBBLE_COUNCIL_COLOR = '#8B5CF6';  // Purple
+export const BUBBLE_BG_COLOR = '#FFFFFF'; // White background
+export const BUBBLE_TEXT_COLOR = '#000000'; // Black text
+
 export const FALLBACK_FLOOR_COLOR = '#808080';
 
 // ── Rendering - Overlay Colors (canvas, not CSS) ─────────────

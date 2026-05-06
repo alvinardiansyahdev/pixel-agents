@@ -507,6 +507,69 @@ export function useExtensionMessages(
         const id = msg.id as number;
         os.setAgentTokens(id, msg.inputTokens as number, msg.outputTokens as number);
       }
+      // ── Ruflo-specific messages ─────────────────────────────────────
+      else if (msg.type === 'rufloAgentCreated') {
+        // Handle new Ruflo agent
+        const id = msg.id as number;
+        const model = msg.model as 'haiku' | 'sonnet' | 'opus';
+        
+        // Map string ID to number for character system
+        setAgents((prev) => (prev.includes(id) ? prev : [...prev, id]));
+        setSelectedAgent(id);
+        
+        // Add agent with Ruflo metadata
+        os.addAgent(id, undefined, undefined, undefined, false, undefined);
+        // Set Ruflo-specific metadata after creation
+        const ch = os.characters.get(id);
+        if (ch) {
+          ch.rufloAgentId = msg.id as string;
+          ch.model = model;
+        }
+        saveAgentSeats(os);
+      }
+      else if (msg.type === 'bubbleShow') {
+        // Show chat bubble on agent
+        const agentId = msg.agentId as number;
+        const bubbleId = msg.bubbleId as string;
+        const bubbleType = msg.bubbleType as string;
+        const message = msg.message as string;
+        const targetAgentId = msg.targetAgentId as number | undefined;
+        
+        os.showChatBubble(agentId, {
+          id: bubbleId,
+          type: bubbleType as 'thinking' | 'question' | 'answer' | 'error' | 'broadcast' | 'council',
+          message,
+          targetAgentId: targetAgentId?.toString(),
+          timestamp: Date.now(),
+          visible: true,
+          fadeProgress: 0,
+        });
+      }
+      else if (msg.type === 'bubbleHide') {
+        // Hide chat bubble
+        const agentId = msg.agentId as number;
+        const bubbleId = msg.bubbleId as string;
+        os.hideChatBubble(agentId, bubbleId);
+      }
+      else if (msg.type === 'councilStart') {
+        // Start council meeting - animate agents to meeting table
+        const sessionId = msg.sessionId as string;
+        const participants = msg.participants as number[];
+        os.startCouncil(sessionId, participants);
+      }
+      else if (msg.type === 'councilVote') {
+        // Show vote indicator
+        const sessionId = msg.sessionId as string;
+        const agentId = msg.agentId as number;
+        const vote = msg.vote as 'accept' | 'reject';
+        os.setCouncilVote(sessionId, agentId, vote);
+      }
+      else if (msg.type === 'councilEnd') {
+        // End council meeting
+        const sessionId = msg.sessionId as string;
+        const result = msg.result as 'accepted' | 'rejected';
+        os.endCouncil(sessionId, result);
+      }
     };
     window.addEventListener('message', handler);
     vscode.postMessage({ type: 'webviewReady' });

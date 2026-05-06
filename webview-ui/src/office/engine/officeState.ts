@@ -23,6 +23,7 @@ import {
 import { findPath, getWalkableTiles, isWalkable } from '../layout/tileMap.js';
 import { getLoadedCharacterCount } from '../sprites/spriteData.js';
 import type {
+  Bubble,
   Character,
   FurnitureInstance,
   OfficeLayout,
@@ -709,6 +710,92 @@ export class OfficeState {
     if (!ch) return;
     ch.inputTokens = inputTokens;
     ch.outputTokens = outputTokens;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Ruflo Chat Bubbles
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  showChatBubble(id: number, bubble: Bubble): void {
+    const ch = this.characters.get(id);
+    if (!ch) return;
+    ch.chatBubble = bubble;
+  }
+
+  hideChatBubble(id: number, bubbleId: string): void {
+    const ch = this.characters.get(id);
+    if (!ch || !ch.chatBubble) return;
+    if (ch.chatBubble.id === bubbleId) {
+      ch.chatBubble.visible = false;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Council / Meeting Room
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  councilSessions: Map<string, { participants: number[]; votes: Map<number, 'accept' | 'reject'> }> = new Map();
+  meetingTablePosition = { col: 10, row: 5 };
+
+  startCouncil(sessionId: string, participants: number[]): void {
+    this.councilSessions.set(sessionId, {
+      participants,
+      votes: new Map(),
+    });
+    // Move all participants to meeting table
+    for (const id of participants) {
+      const ch = this.characters.get(id);
+      if (ch) {
+        ch.councilSessionId = sessionId;
+        ch.path = findPath(
+          ch.tileCol,
+          ch.tileRow,
+          this.meetingTablePosition.col + participants.indexOf(id),
+          this.meetingTablePosition.row,
+          this.tileMap,
+          this.blockedTiles,
+        );
+        ch.moveProgress = 0;
+        ch.state = CharacterState.WALK;
+      }
+    }
+  }
+
+  setCouncilVote(sessionId: string, agentId: number, vote: 'accept' | 'reject'): void {
+    const session = this.councilSessions.get(sessionId);
+    if (session) {
+      session.votes.set(agentId, vote);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  endCouncil(sessionId: string, _result: 'accepted' | 'rejected'): void {
+    const session = this.councilSessions.get(sessionId);
+    if (!session) return;
+    // Clear council session from all participants
+    for (const id of session.participants) {
+      const ch = this.characters.get(id);
+      if (ch) {
+        ch.councilSessionId = undefined;
+        // Walk back to seat
+        if (ch.seatId) {
+          const seat = this.seats.get(ch.seatId);
+          if (seat) {
+            ch.path = findPath(
+              ch.tileCol,
+              ch.tileRow,
+              seat.seatCol,
+              seat.seatRow,
+              this.tileMap,
+              this.blockedTiles,
+            );
+            ch.moveProgress = 0;
+            ch.state = CharacterState.WALK;
+          }
+        }
+      }
+    }
+    this.councilSessions.delete(sessionId);
   }
 
   update(dt: number): void {

@@ -127,6 +127,16 @@ export interface OfficeLayout {
   layoutRevision?: number;
 }
 
+export interface Bubble {
+  id: string;
+  type: 'thinking' | 'question' | 'answer' | 'error' | 'broadcast' | 'council';
+  message: string;
+  targetAgentId?: string;
+  timestamp: number;
+  visible: boolean;
+  fadeProgress: number;  // 0-1, for fade animation
+}
+
 export interface Character {
   id: number;
   state: CharacterState;
@@ -180,6 +190,16 @@ export interface Character {
   matrixEffectSeeds: number[];
   /** Workspace folder name (only set for multi-root workspaces) */
   folderName?: string;
+
+  // -- Ruflo-specific --
+  /** Ruflo agent ID (string) */
+  rufloAgentId?: string;
+  /** Agent model: haiku/sonnet/opus */
+  model?: 'haiku' | 'sonnet' | 'opus';
+  /** Active chat bubble (Ruflo) */
+  chatBubble?: Bubble;
+  /** Council session ID if in meeting */
+  councilSessionId?: string;
 
   // -- Agent Teams --
   /** Team name this agent belongs to */

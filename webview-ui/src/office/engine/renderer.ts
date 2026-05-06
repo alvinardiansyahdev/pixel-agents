@@ -33,6 +33,22 @@ import {
   VOID_TILE_DASH_PATTERN,
   VOID_TILE_OUTLINE_COLOR,
 } from '../../constants.js';
+import {
+  BUBBLE_ANSWER_COLOR,
+  BUBBLE_BG_COLOR,
+  BUBBLE_BROADCAST_COLOR,
+  BUBBLE_COUNCIL_COLOR,
+  BUBBLE_ERROR_COLOR,
+  BUBBLE_QUESTION_COLOR,
+  BUBBLE_TEXT_COLOR,
+  BUBBLE_THINKING_COLOR,
+  CHAT_BUBBLE_BORDER_RADIUS,
+  CHAT_BUBBLE_FADE_DURATION,
+  CHAT_BUBBLE_FONT_SIZE,
+  // CHAT_BUBBLE_HEIGHT, // unused
+  CHAT_BUBBLE_PADDING,
+  CHAT_BUBBLE_WIDTH,
+} from '../../constants.js';
 import { getColorizedFloorSprite, hasFloorSprites, WALL_COLOR } from '../floorTiles.js';
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache.js';
 import {
@@ -522,6 +538,109 @@ function renderBubbles(
   }
 }
 
+// ── Ruflo Chat Bubbles ───────────────────────────────────────────
+
+/**
+ * Get bubble color by type (using shared constants)
+ */
+function getBubbleColor(type: string): string {
+  const colors: Record<string, string> = {
+    thinking: BUBBLE_THINKING_COLOR,
+    question: BUBBLE_QUESTION_COLOR,
+    answer: BUBBLE_ANSWER_COLOR,
+    error: BUBBLE_ERROR_COLOR,
+    broadcast: BUBBLE_BROADCAST_COLOR,
+    council: BUBBLE_COUNCIL_COLOR,
+  };
+  return colors[type] ?? BUBBLE_THINKING_COLOR;
+}
+
+/**
+ * Render chat bubbles for Ruflo agents
+ */
+export function renderChatBubbles(
+  ctx: CanvasRenderingContext2D,
+  characters: Character[],
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  for (const ch of characters) {
+    if (!ch.chatBubble || !ch.chatBubble.visible) continue;
+
+    const bubble = ch.chatBubble;
+    const color = getBubbleColor(bubble.type);
+
+    // Calculate fade progress
+    const elapsed = Date.now() - bubble.timestamp;
+    const fadeDuration = CHAT_BUBBLE_FADE_DURATION * 1000;
+    let alpha = 1.0;
+    if (elapsed > fadeDuration - 1000) {
+      // Fade out in last 1 second
+      alpha = Math.max(0, 1 - (elapsed - (fadeDuration - 1000)) / 1000);
+    }
+
+    // Truncate message if needed
+    const maxLen = 50;
+    let message = bubble.message;
+    if (message.length > maxLen) {
+      message = message.slice(0, maxLen - 3) + '...';
+    }
+
+    // Calculate bubble dimensions
+    const fontSize = CHAT_BUBBLE_FONT_SIZE * zoom;
+    ctx.font = `${fontSize}px sans-serif`;
+    const textMetrics = ctx.measureText(message);
+    const textWidth = Math.min(textMetrics.width + CHAT_BUBBLE_PADDING * 2 * zoom, CHAT_BUBBLE_WIDTH * zoom);
+    const textHeight = fontSize + CHAT_BUBBLE_PADDING * zoom;
+
+    // Position: center above character
+    const sittingOff = ch.state === CharacterState.TYPE ? 10 * zoom : 0;
+    const bubbleX = Math.round(offsetX + ch.x * zoom - textWidth / 2);
+    const bubbleY = Math.round(
+      offsetY + (ch.y + sittingOff - 24 * zoom) - textHeight - 4 * zoom,
+    );
+
+    // Draw bubble
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // Background
+    ctx.fillStyle = BUBBLE_BG_COLOR;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2 * zoom;
+    
+    // Rounded rectangle
+    const radius = CHAT_BUBBLE_BORDER_RADIUS * zoom;
+    const x = bubbleX;
+    const y = bubbleY;
+    const w = textWidth;
+    const h = textHeight;
+
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Text
+    ctx.fillStyle = BUBBLE_TEXT_COLOR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(message, x + w / 2, y + h / 2);
+
+    ctx.restore();
+  }
+}
+
 export interface ButtonBounds {
   /** Center X in device pixels */
   cx: number;
@@ -624,6 +743,9 @@ export function renderFrame(
 
   // Speech bubbles (always on top of characters)
   renderBubbles(ctx, characters, offsetX, offsetY, zoom);
+
+  // Ruflo chat bubbles (on top of everything)
+  renderChatBubbles(ctx, characters, offsetX, offsetY, zoom);
 
   // Editor overlays
   if (editor) {
